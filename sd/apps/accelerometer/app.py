@@ -79,8 +79,7 @@ class RadarDisplay:
     def update(self, ax, ay, az):
         self.sweep_angle = (self.sweep_angle + 6) % 360
         
-        # IMU axes are rotated 90° from screen orientation
-        # Swap and adjust: tilt X → screen Y, tilt Y → screen X
+        # Screen X from IMU Y, screen Y from IMU X (with sign fix)
         bx = max(-1, min(1, ay))
         by = max(-1, min(1, ax))
         
