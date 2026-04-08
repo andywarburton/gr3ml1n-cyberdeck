@@ -1,0 +1,5 @@
+{
+    "name": "BLE Scanner",
+    "description": "Scan for nearby Bluetooth devices",
+    "order": 1
+}
