@@ -59,9 +59,8 @@ print("Loading apps...")
 apps = discover_apps()
 for i, app in enumerate(apps):
     num = "{:02d}".format(i + 1)
-    name = app.get("name", "???").ljust(20)
-    desc = app.get("description", "")[:30]
-    print("  [{}] {} - {}".format(num, name, desc))
+    name = app.get("name", "???")[:20]
+    print("  [{}] {}".format(num, name))
 print("Total: {} apps\n".format(len(apps)))
 
 # ── Portrait mode ──────────────────────────────────────────────────────────────
