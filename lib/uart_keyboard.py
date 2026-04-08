@@ -23,6 +23,8 @@ _HID_MAP = {
     54: ",", 55: ".", 56: "/",
     47: "[", 48: "]", 49: "\\",
     51: ";", 52: "'",
+    82: "_UP",     # Up arrow
+    81: "_DOWN",    # Down arrow
 }
 
 _instance = None
@@ -81,13 +83,10 @@ class UartKeyboard:
 
         while '\r\n' in self._buffer:
             line, self._buffer = self._buffer.split('\r\n', 1)
-            print("KBD line: " + line)
             
             if line.startswith("Press:"):
                 code = _parse_code(line)
-                print("KBD parsed code: " + str(code))
                 if code is not None:
-                    print("KBD Press: code=" + str(code))
                     if code in _HID_MAP:
                         val = _HID_MAP[code]
                         if val.startswith("_"):
@@ -97,6 +96,10 @@ class UartKeyboard:
                                 result['escape'] = True
                             elif val == "_BKSP":
                                 result['delete'] = True
+                            elif val == "_UP":
+                                result['up'] = True
+                            elif val == "_DOWN":
+                                result['down'] = True
                         else:
                             result['char'] = val
 
