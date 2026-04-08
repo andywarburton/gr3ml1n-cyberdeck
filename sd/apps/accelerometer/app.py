@@ -69,7 +69,7 @@ class RadarDisplay:
         pal = displayio.Palette(1)
         pal[0] = _C_RING
         self._radar_group.append(
-            vectorio.Circle(pixel_shader=pal, radius=radius, cx=RADAR_CX, cy=RADAR_CY)
+            vectorio.Circle(pixel_shader=pal, radius=radius, x=RADAR_CX, y=RADAR_CY)
         )
 
     def _add_crosshair(self):
