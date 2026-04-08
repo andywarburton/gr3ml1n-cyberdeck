@@ -4,13 +4,7 @@
 # Auto-discovers apps in /sd/apps/ (SD card) with /apps/ (flash) as fallback.
 # Each app folder must contain manifest.json + app.py with run(display,touch,W,H).
 
-print("""
-  _   _ ___ _  _ ___ 
- | | | | __| \\| | __|
- | |_| | _|| .` | _| 
-  \\___/|___|_|\\_|___|
- Mini Cyberdeck OS
-""")
+print("Mini Cyberdeck OS")
 
 import board
 import displayio
