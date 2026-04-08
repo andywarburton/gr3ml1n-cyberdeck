@@ -5,10 +5,11 @@
 # Each app folder must contain manifest.json + app.py with run(display,touch,W,H).
 
 print("""
-  ___  _   _ _  _ _  __ ___ ___ 
- | _ )| | | | \| | |/ /| __| _ \\
- | _ \\| |_| | .` | ' < | _||   /
- |___/ \\___/|_|\\_|_|\\_\\|___|_|_\\
+  _   _ ___ _  _ ___ 
+ | | | | __| \\| | __|
+ | |_| | _|| .` | _| 
+  \\___/|___|_|\\_|___|
+ Mini Cyberdeck OS
 """)
 
 import board
