@@ -331,7 +331,7 @@ def run(display, touch, keyboard, W, H):
     day_lbl.anchored_position = (W // 2, 252)
     sc.append(day_lbl)
 
-    ui.make_footer(sc, "^ SWIPE UP to quit")
+    ui.make_footer(sc, "ESC or SWIPE UP to quit")
     display.root_group = sc
 
     # ── Event loop ────────────────────────────────────────────────────────
@@ -343,6 +343,11 @@ def run(display, touch, keyboard, W, H):
     sx = sy = lx = ly = 0
 
     while True:
+        if keyboard:
+            kbd = keyboard.poll()
+            if kbd['escape']:
+                break
+
         t = time.localtime()
 
         if t.tm_sec != last_sec:

@@ -176,13 +176,13 @@ def _build_keyboard(sc):
     return key_areas
 
 
-def _run_t9_loop(display, touch, W, H, scene, key_areas,
+def _run_t9_loop(display, touch, keyboard, W, H, scene, key_areas,
                  on_key, check_timeout, on_swipe_up):
     """
     Generic T9 input event loop.
     Calls on_key(kid, now) on key tap.
     Calls check_timeout(now) every loop.
-    Calls on_swipe_up() and returns True when SWIPE UP detected.
+    Calls on_swipe_up() and returns True when SWIPE UP or ESC detected.
     Returns False on any other exit (caller-driven via exception/break).
     """
     fl_pal  = None
@@ -196,6 +196,11 @@ def _run_t9_loop(display, touch, W, H, scene, key_areas,
         if fl_pal and now >= fl_time:
             fl_pal[0] = ui.C_BG_PANEL
             fl_pal = None
+
+        if keyboard:
+            kbd = keyboard.poll()
+            if kbd['escape']:
+                return on_swipe_up()
 
         x, y, tch = touch.read()
         time.sleep(0.03)
@@ -224,10 +229,10 @@ def _run_t9_loop(display, touch, W, H, scene, key_areas,
 
 # ── Name entry screen ─────────────────────────────────────────────────────────
 
-def _name_screen(display, touch, W, H):
+def _name_screen(display, touch, keyboard, W, H):
     """
     T9 name entry. Returns the entered name string (may be empty if user
-    skipped with SWIPE UP immediately).
+    skipped with SWIPE UP or ESC immediately).
     """
     name   = ""
     p_key  = None
@@ -315,7 +320,7 @@ def _name_screen(display, touch, W, H):
         _commit()
         return True
 
-    _run_t9_loop(display, touch, W, H, sc, key_areas,
+    _run_t9_loop(display, touch, keyboard, W, H, sc, key_areas,
                  _on_key, _on_timeout, _on_swipe)
 
     display.root_group = displayio.Group()
@@ -431,10 +436,10 @@ def _list_screen(display, touch, W, H):
         return result
 
 
-# ── Editor ────────────────────────────────────────────────────────────────────
+# ── Editor ─────────────────────────────────────────────────────────────────---
 
-def _editor(display, touch, W, H, path):
-    """T9 editor. Saves on SWIPE UP. Shows save status before returning."""
+def _editor(display, touch, keyboard, W, H, path):
+    """T9 editor. Saves on SWIPE UP or ESC. Shows save status before returning."""
     text   = _read(path)
     p_key  = None
     p_idx  = 0
@@ -475,7 +480,7 @@ def _editor(display, touch, W, H, path):
     sc.append(slbl)
 
     key_areas = _build_keyboard(sc)
-    ui.make_footer(sc, "^ SWIPE UP = SAVE & QUIT")
+    ui.make_footer(sc, "ESC or SWIPE UP = SAVE & QUIT")
     display.root_group = sc
 
     def _commit():
@@ -536,7 +541,7 @@ def _editor(display, touch, W, H, path):
             time.sleep(1.0)
         return True
 
-    _run_t9_loop(display, touch, W, H, sc, key_areas,
+    _run_t9_loop(display, touch, keyboard, W, H, sc, key_areas,
                  _on_key, _on_timeout, _on_swipe)
 
     display.root_group = displayio.Group()
@@ -555,13 +560,13 @@ def run(display, touch, keyboard, W, H):
             break
         elif res[0] == "new":
             # Step 1: get a name
-            raw_name = _name_screen(display, touch, W, H)
+            raw_name = _name_screen(display, touch, keyboard, W, H)
             stem = _sanitize(raw_name) if raw_name else None
             if stem:
                 fname = _unique_name(stem, _list_notes())
             else:
                 fname = _next_auto_name(_list_notes())
-            _editor(display, touch, W, H, _DATA_DIR + "/" + fname)
+            _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname)
         elif res[0] == "edit":
-            _editor(display, touch, W, H, res[1])
+            _editor(display, touch, keyboard, W, H, res[1])
     display.root_group = displayio.Group()

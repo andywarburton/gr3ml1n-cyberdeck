@@ -88,13 +88,18 @@ def run(display, touch, keyboard, W, H):
 
         btn_info.append({"name": name, "y": by, "ind_pal": ind_pal})
 
-    ui.make_footer(scene, "TAP THEME  ^ SWIPE UP to quit")
+    ui.make_footer(scene, "ESC or TAP THEME to quit")
     display.root_group = scene
 
     finger_down = False
     sx = sy = lx = ly = 0
 
     while True:
+        if keyboard:
+            kbd = keyboard.poll()
+            if kbd['escape']:
+                break
+
         x, y, touching = touch.read()
         time.sleep(0.04)
 

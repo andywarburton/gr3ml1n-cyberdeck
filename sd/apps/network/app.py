@@ -207,7 +207,7 @@ def run(display, touch, keyboard, W, H):
     page_lbl.anchored_position = (W // 2, _PAGE_Y + 8)
     sc.append(page_lbl)
 
-    ui.make_footer(sc, "TAP=ACTION  < > PAGE  ^ QUIT")
+    ui.make_footer(sc, "ESC or SWIPE UP to quit")
     display.root_group = sc
 
     # ── Refresh helpers ────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ def run(display, touch, keyboard, W, H):
                     ssid = base[:22 - len(tag)] + tag
                 else:
                     ssid = base[:22]
-                sl.text  = ssid
+                sl.text = ssid
                 rl.text  = _sig_str(n["rssi"]) + " " + _auth_str(n["authmode"])
                 dl.text  = "{} dBm".format(n["rssi"])
                 sl.color = ui.C_GREEN_HI
@@ -284,6 +284,11 @@ def run(display, touch, keyboard, W, H):
     sx = sy = lx = ly = 0
 
     while True:
+        if keyboard:
+            kbd = keyboard.poll()
+            if kbd['escape']:
+                break
+
         x, y, tch = touch.read()
         time.sleep(0.04)
 

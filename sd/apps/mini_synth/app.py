@@ -246,6 +246,11 @@ def _run_synth(display, touch, W, H, _audio, HAS_AUD, NOTE_SAMPLES):
     last_hex = -1
 
     while True:
+        if keyboard:
+            kbd = keyboard.poll()
+            if kbd['escape']:
+                break
+
         x, y, tch = touch.read()
         _update_bars()
         time.sleep(0.03)

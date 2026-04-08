@@ -47,7 +47,7 @@ def run(display, touch, keyboard, W, H):
     tap_lbl.anchored_position = (W // 2, 260)
     scene.append(tap_lbl)
 
-    ui.make_footer(scene, "TAP SCREEN  ^ SWIPE UP to quit")
+    ui.make_footer(scene, "ESC or SWIPE UP to quit")
     display.root_group = scene
 
     color_idx = 0
@@ -56,6 +56,11 @@ def run(display, touch, keyboard, W, H):
     sx = sy = lx = ly = 0
 
     while True:
+        if keyboard:
+            kbd = keyboard.poll()
+            if kbd['escape']:
+                break
+
         x, y, touching = touch.read()
         time.sleep(0.04)
 

@@ -97,7 +97,7 @@ def run(display, touch, keyboard, W, H):
     bl.anchored_position = (W // 2, (_BOT_SEP_Y + ui.FOOTER_Y) // 2)
     scene.append(bl)
 
-    ui.make_footer(scene, "^ SWIPE UP to quit")
+    ui.make_footer(scene, "ESC or SWIPE UP to quit")
     display.root_group = scene
 
     # ── Status colours (all use current theme) ────────────────────────────
@@ -113,6 +113,11 @@ def run(display, touch, keyboard, W, H):
     fsx = fsy = flx = fly = 0
 
     while True:
+        if keyboard:
+            kbd = keyboard.poll()
+            if kbd['escape']:
+                break
+
         now = time.monotonic()
 
         # Restore flashed button
