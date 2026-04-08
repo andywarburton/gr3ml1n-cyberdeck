@@ -1,0 +1,7 @@
+{
+  "name": "CLOCK",
+  "description": "Digital clock  RTC/NTP",
+  "version": "1.0",
+  "author": "SYS",
+  "order": 1
+}

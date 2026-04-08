@@ -1,0 +1,30 @@
+# CircuitPython
+.fseventsd/
+.Trash-1000
+.Trashes
+.metadata_never_index
+boot_out.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Secrets
+settings.toml
+
+# Claude
+.claude/

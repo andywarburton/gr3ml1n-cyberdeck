@@ -1,0 +1,7 @@
+{
+  "name": "ACCELEROMETER",
+  "description": "Display G-force values",
+  "version": "1.0",
+  "author": "SYS",
+  "order": 4
+}

@@ -1,0 +1,7 @@
+{
+  "name": "NETWORK",
+  "description": "WiFi scan & status",
+  "version": "1.0",
+  "author": "SYS",
+  "order": 5
+}
