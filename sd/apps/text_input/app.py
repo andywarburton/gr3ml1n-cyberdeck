@@ -18,7 +18,8 @@ except Exception:
     _HAS_UART_KB = False
 
 _DATA_DIR = "/sd/apps/text_input/data"
-_MAX_CHARS = 36
+_LINE_CHARS = 18
+_LINES_VISIBLE = 14
 
 
 # ── File helpers ──────────────────────────────────────────────────────────────
@@ -72,7 +73,7 @@ def _write(path, text):
         return False
 
 
-def _wrap(text, w=_MAX_CHARS):
+def _wrap(text, w=_LINE_CHARS):
     out = []
     for raw in text.split("\n"):
         if not raw:
@@ -191,7 +192,7 @@ def _list_screen(display, touch, W, H):
 
 # ── Editor ──────────────────────────────────────────────────────────────────
 
-def _editor(display, touch, W, H, path):
+def _editor(display, touch, keyboard, W, H, path):
     text = _read(path)
     name = path.split("/")[-1][:-4].replace('_', ' ').upper()
 
@@ -199,28 +200,20 @@ def _editor(display, touch, W, H, path):
     ui.make_title_bar(sc, "TEXT INPUT:EDIT", name)
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
-    TY = [ui.CONTENT_Y + 2 + i * 14 for i in range(8)]
+    LINE_H = 18
+    TY = [ui.CONTENT_Y + 2 + i * LINE_H for i in range(_LINES_VISIBLE)]
     tlbls = []
-    for i in range(8):
-        tl = label.Label(terminalio.FONT, text=" ", color=ui.C_GREEN, scale=1)
+    for i in range(_LINES_VISIBLE):
+        tl = label.Label(terminalio.FONT, text=" ", color=ui.C_GREEN, scale=2)
         tl.anchor_point = (0.0, 0.0)
         tl.anchored_position = (2, TY[i])
         sc.append(tl)
         tlbls.append(tl)
 
-    IY = ui.CONTENT_Y + 120
-    ui.solid_rect(sc, 0, IY - 1, W, 1, ui.C_GREEN_DIM)
-    ui.solid_rect(sc, 0, IY, W, 18, ui.C_BG_PANEL)
-    ui.solid_rect(sc, 0, IY + 18, W, 1, ui.C_GREEN_DIM)
-    ilbl = label.Label(terminalio.FONT, text="> |", color=ui.C_GREEN_HI, scale=1)
-    ilbl.anchor_point = (0.0, 0.5)
-    ilbl.anchored_position = (2, IY + 9)
-    sc.append(ilbl)
-
-    SY = IY + 22
+    STATUS_Y = ui.FOOTER_Y - 18
     slbl = label.Label(terminalio.FONT, text="0 chars", color=ui.C_GREEN_DIM, scale=1)
-    slbl.anchor_point = (0.0, 0.5)
-    slbl.anchored_position = (2, SY)
+    slbl.anchor_point = (0.5, 0.5)
+    slbl.anchored_position = (W // 2, STATUS_Y)
     sc.append(slbl)
 
     ui.make_footer(sc, "^ SWIPE UP = SAVE & QUIT")
@@ -228,11 +221,10 @@ def _editor(display, touch, W, H, path):
 
     def _refresh():
         all_lines = _wrap(text)
-        disp = all_lines[-8:] if len(all_lines) > 8 else all_lines
-        for i in range(8):
-            tlbls[i].text = (disp[i][:36] if i < len(disp) else "") or " "
-        last = all_lines[-1] if all_lines else ""
-        ilbl.text = ("> " + last + "|")[:38]
+        start = max(0, len(all_lines) - _LINES_VISIBLE)
+        disp = all_lines[start:start + _LINES_VISIBLE]
+        for i in range(_LINES_VISIBLE):
+            tlbls[i].text = (disp[i] if i < len(disp) else "") or " "
         slbl.text = "{} chars".format(len(text))
 
     _refresh()
@@ -247,7 +239,6 @@ def _editor(display, touch, W, H, path):
     sx = sy = lx = ly = 0
 
     while True:
-        # Poll UART first (higher priority)
         if uart_kb:
             result = uart_kb.poll()
             if result['char']:
@@ -261,7 +252,6 @@ def _editor(display, touch, W, H, path):
                 text += "\n"
                 _refresh()
 
-        # Check touch (swipe up to quit)
         x, y, tch = touch.read()
 
         if tch:
@@ -300,7 +290,7 @@ def run(display, touch, keyboard, W, H):
             break
         elif res[0] == "new":
             fname = _next_auto_name(_list_files())
-            _editor(display, touch, W, H, _DATA_DIR + "/" + fname)
+            _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname)
         elif res[0] == "edit":
-            _editor(display, touch, W, H, res[1])
+            _editor(display, touch, keyboard, W, H, res[1])
     display.root_group = displayio.Group()
