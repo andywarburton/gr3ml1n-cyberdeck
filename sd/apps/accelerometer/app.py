@@ -79,9 +79,9 @@ class RadarDisplay:
     def update(self, ax, ay, az):
         self.sweep_angle = (self.sweep_angle + 6) % 360
         
-        # Screen X from IMU Y, screen Y from IMU X (with sign fix)
-        bx = max(-1, min(1, ay))
-        by = max(-1, min(1, ax))
+        # Try different axis combinations
+        bx = max(-1, min(1, ax))
+        by = max(-1, min(1, -ay))
         
         target_x = RADAR_CX + bx * (RADAR_R - 8)
         target_y = RADAR_CY - by * (RADAR_R - 8)
