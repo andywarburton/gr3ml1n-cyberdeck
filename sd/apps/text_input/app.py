@@ -173,6 +173,11 @@ def _name_screen(display, touch, keyboard, W, H):
                 if name.strip():
                     return name.strip()
                 return None
+            elif result['escape']:
+                display.root_group = displayio.Group()
+                del sc
+                gc.collect()
+                return None
 
         x, y, tch = touch.read()
 
@@ -324,7 +329,7 @@ def _editor(display, touch, keyboard, W, H, path):
     slbl.anchored_position = (W // 2, STATUS_Y)
     sc.append(slbl)
 
-    ui.make_footer(sc, "^ SWIPE UP = SAVE & QUIT")
+    ui.make_footer(sc, "ESC or SWIPE UP = SAVE & QUIT")
     display.root_group = sc
 
     def _refresh():
@@ -345,6 +350,7 @@ def _editor(display, touch, keyboard, W, H, path):
 
     fd = False
     sx = sy = lx = ly = 0
+    quit_requested = False
 
     while True:
         if uart_kb:
@@ -359,6 +365,8 @@ def _editor(display, touch, keyboard, W, H, path):
             elif result['enter']:
                 text += "\n"
                 _refresh()
+            elif result['escape']:
+                quit_requested = True
 
         x, y, tch = touch.read()
 
@@ -372,16 +380,19 @@ def _editor(display, touch, keyboard, W, H, path):
             g = classify_gesture(sx, sy, lx, ly, W, H,
                 swipe_edge=ui.SWIPE_EDGE, swipe_min_dist=ui.SWIPE_MIN)
             if g and g[0] == "SWIPE UP":
-                if text:
-                    slbl.text = "SAVING..."
-                    slbl.color = ui.C_AMBER
-                    ok = _write(path, text)
-                    slbl.text = "SAVED!" if ok else "SAVE ERR"
-                    slbl.color = ui.C_GREEN_HI if ok else ui.C_RED
-                    time.sleep(1.0)
-                if uart_kb:
-                    uart_kb.deinit()
-                break
+                quit_requested = True
+
+        if quit_requested:
+            if text:
+                slbl.text = "SAVING..."
+                slbl.color = ui.C_AMBER
+                ok = _write(path, text)
+                slbl.text = "SAVED!" if ok else "SAVE ERR"
+                slbl.color = ui.C_GREEN_HI if ok else ui.C_RED
+                time.sleep(1.0)
+            if uart_kb:
+                uart_kb.deinit()
+            break
 
     display.root_group = displayio.Group()
     del sc
