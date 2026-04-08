@@ -35,7 +35,7 @@ C_RED_DIM   = 0x220000
 C_WHITE     = 0xDDFFDD
 
 # ── Theme definitions ──────────────────────────────────────────────────────────
-THEME_NAMES = ["green", "amber", "red", "purple", "grey"]
+THEME_NAMES = ["green", "amber", "red", "purple", "grey", "paper"]
 
 THEMES = {
     "green": {
@@ -92,6 +92,17 @@ THEMES = {
         "primary":   0x999999,
         "hi":        0xCCCCCC,
         "glow":      0xEEEEEE,
+    },
+    "paper": {
+        "bg":        0xF5F0E6,
+        "bg_scan":   0xEBE5D8,
+        "bg_panel":  0xE8E0D0,
+        "bg_header": 0xDDD5C5,
+        "dim":       0x8B7355,
+        "mid":       0xA67C52,
+        "primary":   0xC65D3B,
+        "hi":        0x8B4513,
+        "glow":      0xD2691E,
     },
 }
 
