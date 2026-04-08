@@ -1,14 +1,12 @@
 # uart_keyboard.py - UART keyboard input reader
 # Reads keycodes from KMK firmware over UART
-# Protocol: P:KEYCODE\\r\\n (pressed), R:KEYCODE\\r\\n (released)
+# Protocol: P:KEYCODE\r\n (pressed), R:KEYCODE\r\n (released)
 
 import board
 import busio
-import time
 
 _UART_BAUD = 115200
 
-# Keycode to character mapping
 _KEYCODE_MAP = {
     "KC.A": "a", "KC.B": "b", "KC.C": "c", "KC.D": "d",
     "KC.E": "e", "KC.F": "f", "KC.G": "g", "KC.H": "h",
@@ -31,32 +29,41 @@ _KEYCODE_MAP = {
 
 _DELETE_KEYS = {"KC.BKSP", "KC.DELETE", "KC.DEL", "7"}
 _ENTER_KEY = "KC.ENTER"
+_NAV_KEYS = {"KC.UP", "KC.DOWN", "KC.ESC", "KC.ESCAPE"}
+
+_instance = None
+
+
+def get_keyboard():
+    global _instance
+    if _instance is None:
+        _instance = UartKeyboard()
+    return _instance
 
 
 class UartKeyboard:
     def __init__(self, rx=board.RX, tx=board.TX, baudrate=_UART_BAUD):
+        self._uart = None
         try:
             self._uart = busio.UART(tx=tx, rx=rx, baudrate=baudrate, timeout=0)
         except Exception as e:
             print(f"UART init error: {e}")
-            raise
         self._buffer = ""
         self._enabled = False
-        self._pressed_keys = set()
 
     def poll(self):
-        """Poll for keypresses. Returns dict with:
-        - 'char': character pressed (str) or None
-        - 'delete': True if delete pressed
-        - 'enter': True if enter pressed
-        - 'enabled': True if uart keyboard is active
-        """
         result = {
             'char': None,
             'delete': False,
             'enter': False,
+            'up': False,
+            'down': False,
+            'escape': False,
             'enabled': self._enabled
         }
+        
+        if self._uart is None:
+            return result
         
         try:
             data = self._uart.read(256)
@@ -76,22 +83,20 @@ class UartKeyboard:
                 action, keycode = line.split(':', 1)
                 
                 if keycode in _DELETE_KEYS:
-                    print(f"DEL")
                     result['delete'] = True
                 elif keycode == _ENTER_KEY:
-                    print(f"ENTER")
                     result['enter'] = True
+                elif keycode in _NAV_KEYS:
+                    if action == 'P':
+                        if keycode in ("KC.UP", "KC.ESC", "KC.ESCAPE"):
+                            result['up' if keycode == "KC.UP" else 'escape'] = True
+                        elif keycode == "KC.DOWN":
+                            result['down'] = True
                 elif action == 'P' and keycode in _KEYCODE_MAP:
-                    c = _KEYCODE_MAP[keycode]
-                    print(f"CHAR: {c}")
-                    result['char'] = c
-                    self._pressed_keys.add(keycode)
-                elif action == 'P':
-                    print(f"???: {keycode}")
-                elif action == 'R':
-                    self._pressed_keys.discard(keycode)
+                    result['char'] = _KEYCODE_MAP[keycode]
 
         return result
 
     def deinit(self):
-        self._uart.deinit()
+        if self._uart:
+            self._uart.deinit()

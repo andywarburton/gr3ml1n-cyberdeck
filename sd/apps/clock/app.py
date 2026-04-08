@@ -241,7 +241,7 @@ def _detection_splash(display, W, H, msg):
 
 # ── App entry point ───────────────────────────────────────────────────────────
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
 
     # ── Detect time source (with live status splash) ──────────────────────
     splash = _detection_splash(display, W, H, "SCANNING I2C FOR RTC...")

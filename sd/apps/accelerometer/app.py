@@ -18,7 +18,7 @@ except Exception:
     _HAS_IMU = False
 
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
     scene = displayio.Group()
     ui.make_title_bar(scene, "SYS:ACCEL", "G-FORCE")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)

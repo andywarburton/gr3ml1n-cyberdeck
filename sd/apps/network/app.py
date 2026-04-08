@@ -120,7 +120,7 @@ def _sig_str(rssi):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
     networks = []
     page     = 0
 

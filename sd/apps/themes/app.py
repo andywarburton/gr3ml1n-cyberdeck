@@ -35,7 +35,7 @@ _SW_X0    = ui.W - _BTN_X - _SW_TOTAL - 4                   # right margin
 _IND_W    = 4
 
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
     active = ui.get_active_theme()
 
     scene = displayio.Group()

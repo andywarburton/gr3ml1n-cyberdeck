@@ -20,7 +20,7 @@ _BTN_Y      = _INFO_SEP_Y + 8                 # 171
 _BTN_X0     = (ui.W - (3 * _BTN_W + 2 * _BTN_GAP)) // 2   # 12
 
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
     scene = displayio.Group()
     ui.make_title_bar(scene, "SYS:TOUCH TEST", "v1.0")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)

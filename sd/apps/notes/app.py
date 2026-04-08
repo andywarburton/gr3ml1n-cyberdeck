@@ -547,7 +547,7 @@ def _editor(display, touch, W, H, path):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
     _ensure_dir()
     while True:
         res = _list_screen(display, touch, W, H)

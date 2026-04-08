@@ -80,7 +80,7 @@ def _find_hex(tx, ty):
 
 
 # ── App entry point ───────────────────────────────────────────────────────────
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
 
     # Audio init
     _audio  = None

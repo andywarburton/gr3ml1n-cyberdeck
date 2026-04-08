@@ -21,6 +21,7 @@ import gc
 
 from adafruit_display_text import label
 from waveshare_touch import WaveshareTouch, classify_gesture
+from uart_keyboard import get_keyboard
 import cyber_ui as ui
 
 # ── Portrait mode ──────────────────────────────────────────────────────────────
@@ -93,13 +94,13 @@ def show_error(msg):
 
 
 # ── App launch engine ──────────────────────────────────────────────────────────
-def launch_app(app):
-    g = {}
+def launch_app(app, keyboard):
+    g = {"keyboard": keyboard}
     try:
         with open(app["_path"] + "/app.py") as f:
             exec(f.read(), g)  # noqa: S102
         if "run" in g:
-            g["run"](display, touch, W, H)
+            g["run"](display, touch, keyboard, W, H)
         else:
             show_error("No run() in " + app.get("name", "?"))
     except MemoryError:
@@ -122,7 +123,7 @@ def tap_to_app(sx, sy, tiles):
 
 
 # ── Build menu scene ───────────────────────────────────────────────────────────
-def build_scene(apps, page):
+def build_scene(apps, page, selected_idx=0):
     scene = displayio.Group()
     ui.make_title_bar(scene, "SYS:LAUNCHER", "CYBERDECK OS")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
@@ -133,34 +134,34 @@ def build_scene(apps, page):
 
     tiles = []
     if visible:
-        # Centre the tile stack vertically in the content area
         stack_h = len(visible) * TILE_H + (len(visible) - 1) * TILE_GAP
         top_pad = (ui.CONTENT_H - stack_h) // 2
         top_y   = ui.CONTENT_Y + top_pad
 
         for i, app in enumerate(visible):
             ty = top_y + i * (TILE_H + TILE_GAP)
+            global_idx = start + i
+            is_selected = (global_idx == selected_idx)
+            color = ui.C_GREEN_HI if is_selected else ui.C_GREEN_DIM
             pal = ui.solid_rect(scene, 2, ty, W - 4, TILE_H, ui.C_BG_PANEL)
-            ui.make_border(scene, 2, ty, W - 4, TILE_H, ui.C_GREEN_DIM)
+            ui.make_border(scene, 2, ty, W - 4, TILE_H, color)
 
-            # App name (left-aligned)
             n_lbl = label.Label(terminalio.FONT,
                 text="> " + app.get("name", "???")[:20],
-                color=ui.C_GREEN_HI, scale=1)
+                color=color, scale=1)
             n_lbl.anchor_point = (0.0, 0.0)
             n_lbl.anchored_position = (8, ty + 5)
             scene.append(n_lbl)
 
-            # Description (second line, smaller)
             desc = app.get("description", "")[:28]
             if desc:
                 d_lbl = label.Label(terminalio.FONT, text=desc,
-                    color=ui.C_GREEN_DIM, scale=1)
+                    color=color, scale=1)
                 d_lbl.anchor_point = (0.0, 1.0)
                 d_lbl.anchored_position = (8, ty + TILE_H - 5)
                 scene.append(d_lbl)
 
-            tiles.append({"ty": ty, "app": app, "pal": pal})
+            tiles.append({"ty": ty, "app": app, "pal": pal, "idx": global_idx})
     else:
         msg = label.Label(terminalio.FONT, text="NO APPS FOUND",
             color=ui.C_GREEN_DIM, scale=2)
@@ -169,9 +170,9 @@ def build_scene(apps, page):
         scene.append(msg)
 
     if total_pages > 1:
-        footer_hint = "< PAGE " + str(page + 1) + "/" + str(total_pages) + " > SWIPE L/R"
+        footer_hint = "< PAGE " + str(page + 1) + "/" + str(total_pages) + " > SWIPE L/R | UP/DOWN+ENTER"
     else:
-        footer_hint = "TAP TO LAUNCH  ^ SWIPE UP=REFRESH"
+        footer_hint = "TAP OR ENTER  |  ESC=REFRESH"
     ui.make_footer(scene, footer_hint)
 
     return scene, tiles, total_pages
@@ -181,10 +182,12 @@ def build_scene(apps, page):
 def run_launcher():
     apps = discover_apps()
     page = 0
+    selected_idx = 0
+    keyboard = get_keyboard()
 
     while True:
-        scene, tiles, total_pages = build_scene(apps, page)
-        display.root_group = scene   # also frees boot group / previous scene
+        scene, tiles, total_pages = build_scene(apps, page, selected_idx)
+        display.root_group = scene
         gc.collect()
 
         finger_down  = False
@@ -194,20 +197,34 @@ def run_launcher():
 
         while selected_app is None and not rebuild:
             x, y, touching = touch.read()
-            time.sleep(0.04)
+            kbd = keyboard.poll()
+
+            if kbd['down']:
+                selected_idx = min(selected_idx + 1, len(apps) - 1)
+                new_page = selected_idx // MAX_VIS
+                if new_page != page:
+                    page = new_page
+                rebuild = True
+            elif kbd['up']:
+                selected_idx = max(selected_idx - 1, 0)
+                new_page = selected_idx // MAX_VIS
+                if new_page != page:
+                    page = new_page
+                rebuild = True
+            elif kbd['enter']:
+                selected_app = apps[selected_idx]
+            elif kbd['escape']:
+                apps = discover_apps()
+                selected_idx = min(selected_idx, len(apps) - 1)
+                rebuild = True
 
             if touching:
                 last_x, last_y = x, y
                 if not finger_down:
                     finger_down = True
                     start_x, start_y = x, y
-                    for tile in tiles:
-                        if tile["ty"] <= y <= tile["ty"] + TILE_H:
-                            tile["pal"][0] = ui.C_GREEN_MID
             elif finger_down:
                 finger_down = False
-                for tile in tiles:
-                    tile["pal"][0] = ui.C_BG_PANEL
 
                 action = classify_gesture(
                     start_x, start_y, last_x, last_y, W, H,
@@ -222,23 +239,19 @@ def run_launcher():
                         page = max(page - 1, 0)
                         rebuild = True
                     elif name == "SWIPE UP":
-                        apps = discover_apps()   # refresh list
+                        apps = discover_apps()
+                        selected_idx = min(selected_idx, len(apps) - 1)
                         rebuild = True
                     elif name == "TAP":
                         selected_app = tap_to_app(start_x, start_y, tiles)
 
-        # Flash selected tile then launch
-        if selected_app is not None:
-            for tile in tiles:
-                if tile["app"] is selected_app:
-                    tile["pal"][0] = ui.C_GREEN_HI
-            time.sleep(0.12)
+            time.sleep(0.04)
 
         del scene
         gc.collect()
 
         if selected_app is not None:
-            launch_app(selected_app)
+            launch_app(selected_app, keyboard)
 
 
 run_launcher()

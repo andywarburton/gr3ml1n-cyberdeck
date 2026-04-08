@@ -12,7 +12,7 @@ from waveshare_touch import classify_gesture
 import cyber_ui as ui
 
 try:
-    from uart_keyboard import UartKeyboard
+    from uart_keyboard import get_keyboard
     _HAS_UART_KB = True
 except Exception:
     _HAS_UART_KB = False
@@ -237,14 +237,11 @@ def _editor(display, touch, W, H, path):
 
     _refresh()
 
-    # Init UART keyboard
-    uart_kb = None
-    if _HAS_UART_KB:
-        try:
-            uart_kb = UartKeyboard()
-            slbl.text = "0 chars [UART OK]"
-        except Exception:
-            slbl.text = "0 chars [NO UART]"
+    uart_kb = keyboard if keyboard else None
+    if uart_kb and keyboard._enabled:
+        slbl.text = "0 chars [UART OK]"
+    else:
+        slbl.text = "0 chars [NO UART]"
 
     fd = False
     sx = sy = lx = ly = 0
@@ -295,7 +292,7 @@ def _editor(display, touch, W, H, path):
 
 # ── Entry point ──────────────────────────────────────────────────────────────
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
     _ensure_dir()
     while True:
         res = _list_screen(display, touch, W, H)

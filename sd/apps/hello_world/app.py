@@ -11,7 +11,7 @@ import cyber_ui as ui
 _COLORS = [ui.C_GREEN_HI, ui.C_AMBER, ui.C_WHITE, ui.C_RED, ui.C_GREEN_GLOW, ui.C_GREEN_MID]
 
 
-def run(display, touch, W, H):
+def run(display, touch, keyboard, W, H):
     scene = displayio.Group()
     ui.make_title_bar(scene, "SYS:HELLO WORLD", "v1.0")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
