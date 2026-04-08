@@ -58,11 +58,11 @@ def discover_apps():
 print("Loading apps...")
 apps = discover_apps()
 for i, app in enumerate(apps):
-    num = str(i + 1).zfill(2)
+    num = "{:02d}".format(i + 1)
     name = app.get("name", "???").ljust(20)
     desc = app.get("description", "")[:30]
-    print(f"  [{num}] {name} - {desc}")
-print(f"Total: {len(apps)} apps\n")
+    print("  [{}] {} - {}".format(num, name, desc))
+print("Total: {} apps\n".format(len(apps)))
 
 # ── Portrait mode ──────────────────────────────────────────────────────────────
 # rotation=90  → 90° clockwise  (right side of landscape becomes top of portrait)
