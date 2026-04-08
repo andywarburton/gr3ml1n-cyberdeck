@@ -17,46 +17,41 @@ from waveshare_touch import classify_gesture
 import cyber_ui as ui
 
 # ── Notes ─────────────────────────────────────────────────────────────────────
-NOTE_NAMES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"]
-NOTE_FREQS = [262,  294,  330,  349,  392,  440,  494,  523]
+NOTE_NAMES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5", "D5", "E5"]
+NOTE_FREQS = [262,  294,  330,  349,  392,  440,  494,  523,  587,  659]
 
 # ── Hex geometry (flat-topped, circumradius 28/24) ────────────────────────────
 _HEX_OUTER = [(0,-28),(24,-14),(24,14),(0,28),(-24,14),(-24,-14)]
 _HEX_INNER = [(0,-24),(21,-12),(21,12),(0,24),(-21,12),(-21,-12)]
 
-# 3-2-3 honeycomb positions (cx, cy)
-# Column spacing 54px, row spacing 48px, centred at x=120
-# Row 0 (3): y=162, x=66/120/174
-# Row 1 (2): y=210, x=93/147   (offset +27 for honeycomb interlock)
-# Row 2 (3): y=258, x=66/120/174
+# 3-4-3 honeycomb positions (cx, cy)
+# Column spacing 54px, row spacing 48px
+# Row 0 (3): y=125, x=66/120/174
+# Row 1 (4): y=173, x=39/93/147/201
+# Row 2 (3): y=221, x=66/120/174
 _HEX_POS = [
-    ( 66, 162),   # C4
-    (120, 162),   # D4
-    (174, 162),   # E4
-    ( 93, 210),   # F4
-    (147, 210),   # G4
-    ( 66, 258),   # A4
-    (120, 258),   # B4
-    (174, 258),   # C5
+    ( 66, 125),   # C4
+    (120, 125),   # D4
+    (174, 125),   # E4
+    ( 39, 173),   # F4
+    ( 93, 173),   # G4
+    (147, 173),   # A4
+    (201, 173),   # B4
+    ( 66, 221),   # C5
+    (120, 221),   # D5
+    (174, 221),   # E5
 ]
-_KEY_Y_MIN = 134   # 162 - 28
-_KEY_Y_MAX = 286   # 258 + 28
+_KEY_Y_MIN = 97    # 125 - 28
+_KEY_Y_MAX = 249   # 221 + 28
 
 # ── Oscilloscope bar layout ───────────────────────────────────────────────────
-_BAR_COUNT  = 8
-_BAR_W      = 20
-_BAR_GAP    = 8
-_BAR_X0     = (240 - (_BAR_COUNT * _BAR_W + (_BAR_COUNT - 1) * _BAR_GAP)) // 2  # 14
-_BAR_BOT_Y  = 60
-_BAR_H_MAX  = 36
+_BAR_COUNT  = 10
+_BAR_W      = 17
+_BAR_GAP    = 6
+_BAR_X0     = (240 - (_BAR_COUNT * _BAR_W + (_BAR_COUNT - 1) * _BAR_GAP)) // 2  # 5
+_BAR_BOT_Y  = 45
+_BAR_H_MAX  = 20
 _BAR_H_IDLE = 4
-
-# ── Static Y values ───────────────────────────────────────────────────────────
-_SEP1_Y    = 64
-_STAT_CY   = 76
-_SEP2_Y    = 88
-_NOTEHZ_CY = 104   # combined "C4  262 Hz" line (scale=2)
-_SEP3_Y    = 118
 
 # ── Audio helpers ─────────────────────────────────────────────────────────────
 SAMPLE_RATE = 8000
@@ -123,7 +118,7 @@ def run(display, touch, W, H):
 def _run_synth(display, touch, W, H, _audio, HAS_AUD, NOTE_SAMPLES):
 
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:MINI SYNTH", "v2.0")
+    ui.make_title_bar(scene, "SYS:MINI SYNTH", "v2.2")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     # ── Oscilloscope bars ─────────────────────────────────────────────────
@@ -140,27 +135,18 @@ def _run_synth(display, touch, W, H, _audio, HAS_AUD, NOTE_SAMPLES):
         bar_pals.append(pal)
         bar_rects.append(r)
 
-    ui.solid_rect(scene, 0, _SEP1_Y, W, 1, ui.C_GREEN_DIM)
+    ui.solid_rect(scene, 0, 46, W, 1, ui.C_GREEN_DIM)
 
-    # ── Audio status ──────────────────────────────────────────────────────
-    stat_lbl = label.Label(terminalio.FONT,
-                           text="[AUDIO OK]" if HAS_AUD else "[VISUAL ONLY]",
-                           color=ui.C_GREEN_HI if HAS_AUD else ui.C_AMBER,
-                           scale=1)
-    stat_lbl.anchor_point    = (0.5, 0.5)
-    stat_lbl.anchored_position = (W // 2, _STAT_CY)
-    scene.append(stat_lbl)
+    # ── Status line ──────────────────────────────────────────────────────
+    status_lbl = label.Label(terminalio.FONT,
+                             text="MDI:// [AUDIO OK] // -- // --- Hz",
+                             color=ui.C_GREEN_HI if HAS_AUD else ui.C_AMBER,
+                             scale=1)
+    status_lbl.anchor_point    = (0.5, 0.5)
+    status_lbl.anchored_position = (W // 2, 57)
+    scene.append(status_lbl)
 
-    ui.solid_rect(scene, 0, _SEP2_Y, W, 1, ui.C_GREEN_DIM)
-
-    # ── Note + frequency (single line) ───────────────────────────────────
-    notehz_lbl = label.Label(terminalio.FONT, text="--  --- Hz",
-                             color=ui.C_GREEN_HI, scale=2)
-    notehz_lbl.anchor_point    = (0.5, 0.5)
-    notehz_lbl.anchored_position = (W // 2, _NOTEHZ_CY)
-    scene.append(notehz_lbl)
-
-    ui.solid_rect(scene, 0, _SEP3_Y, W, 1, ui.C_GREEN_DIM)
+    ui.solid_rect(scene, 0, 64, W, 1, ui.C_GREEN_DIM)
 
     # ── Honeycomb hexagons ────────────────────────────────────────────────
     hex_fill_pals   = []
@@ -225,7 +211,7 @@ def _run_synth(display, touch, W, H, _audio, HAS_AUD, NOTE_SAMPLES):
         hex_fill_pals[k][0]   = ui.C_GREEN_MID
         hex_border_pals[k][0] = ui.C_GREEN_HI
         hex_note_lbls[k].color = ui.C_GREEN_HI
-        notehz_lbl.text        = "{}  {} Hz".format(NOTE_NAMES[k], NOTE_FREQS[k])
+        status_lbl.text        = "MDI:// [AUDIO OK] // {} // {} Hz".format(NOTE_NAMES[k], NOTE_FREQS[k])
         bar_targets[k]         = _BAR_H_MAX
         bar_pals[k][0]         = ui.C_GREEN_HI
         if HAS_AUD and NOTE_SAMPLES:
@@ -246,6 +232,7 @@ def _run_synth(display, touch, W, H, _audio, HAS_AUD, NOTE_SAMPLES):
         bar_pals[k][0]         = ui.C_GREEN_DIM
         if k == active_key:
             active_key = -1
+            status_lbl.text = "MDI:// [AUDIO OK] // -- // --- Hz"
         if HAS_AUD:
             try:
                 _audio.stop()
