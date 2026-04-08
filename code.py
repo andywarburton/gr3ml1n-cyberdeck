@@ -4,6 +4,13 @@
 # Auto-discovers apps in /sd/apps/ (SD card) with /apps/ (flash) as fallback.
 # Each app folder must contain manifest.json + app.py with run(display,touch,W,H).
 
+print("""
+  ___  _   _ _  _ _  __ ___ ___ 
+ | _ )| | | | \| | |/ /| __| _ \\
+ | _ \\| |_| | .` | ' < | _||   /
+ |___/ \\___/|_|\\_|_|\\_\\|___|_|_\\
+""")
+
 import board
 import displayio
 import terminalio

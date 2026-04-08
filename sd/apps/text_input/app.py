@@ -1,6 +1,6 @@
 # apps/text_input/app.py
 # CyberDeck app: Text Input | portrait 240x320
-# Simple direct character input with optional UART keyboard support
+# UART keyboard input only
 
 import displayio
 import terminalio
@@ -18,27 +18,6 @@ except Exception:
     _HAS_UART_KB = False
 
 _DATA_DIR = "/sd/apps/text_input/data"
-
-# Direct key mapping: each key inputs its number directly
-_KEY_MAP = {
-    "1": "1", "2": "2", "3": "3",
-    "4": "4", "5": "5", "6": "6",
-    "7": "7", "8": "8", "9": "9",
-    "0": "0",
-}
-
-# Keyboard layout: (key_id, label)
-_KB_ROWS = [
-    [("1", "1"), ("2", "2"), ("3", "3")],
-    [("4", "4"), ("5", "5"), ("6", "6")],
-    [("7", "7"), ("8", "8"), ("9", "9")],
-    [("DEL", "DEL"), ("0", "0"), ("ENT", "ENT")],
-]
-_KB_Y  = [115, 161, 207, 253]
-_KB_X  = [1, 81, 161]
-_KEY_W = 78
-_KEY_H = 44
-
 _MAX_CHARS = 36
 
 
@@ -59,19 +38,6 @@ def _list_files():
         return sorted(f for f in os.listdir(_DATA_DIR) if f.endswith(".txt"))
     except OSError:
         return []
-
-
-def _unique_name(prefix, existing):
-    existing_set = set(existing)
-    candidate = prefix + ".txt"
-    if candidate not in existing_set:
-        return candidate
-    n = 2
-    while True:
-        candidate = "{}_{}.txt".format(prefix, n)
-        if candidate not in existing_set:
-            return candidate
-        n += 1
 
 
 def _next_auto_name(existing):
@@ -117,26 +83,6 @@ def _wrap(text, w=_MAX_CHARS):
                 raw = raw[w:]
             out.append(raw)
     return out
-
-
-# ── Keyboard builder ─────────────────────────────────────────────────────────
-
-def _build_keyboard(sc):
-    ui.solid_rect(sc, 0, 113, ui.W, 1, ui.C_GREEN_MID)
-    key_areas = []
-    for ri, row in enumerate(_KB_ROWS):
-        for ci, (kid, lbl) in enumerate(row):
-            kx = _KB_X[ci]
-            ky = _KB_Y[ri]
-            pal = ui.solid_rect(sc, kx, ky, _KEY_W, _KEY_H, ui.C_BG_PANEL)
-            ui.make_border(sc, kx, ky, _KEY_W, _KEY_H, ui.C_GREEN_DIM)
-            kl = label.Label(terminalio.FONT, text=lbl,
-                             color=ui.C_GREEN_HI, scale=2)
-            kl.anchor_point = (0.5, 0.5)
-            kl.anchored_position = (kx + _KEY_W // 2, ky + _KEY_H // 2)
-            sc.append(kl)
-            key_areas.append((kx, ky, kx + _KEY_W, ky + _KEY_H, kid, pal))
-    return key_areas
 
 
 # ── List screen ──────────────────────────────────────────────────────────────
@@ -253,16 +199,16 @@ def _editor(display, touch, W, H, path):
     ui.make_title_bar(sc, "TEXT INPUT:EDIT", name)
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
-    TY = [ui.CONTENT_Y + 2 + i * 14 for i in range(4)]
+    TY = [ui.CONTENT_Y + 2 + i * 14 for i in range(8)]
     tlbls = []
-    for i in range(4):
+    for i in range(8):
         tl = label.Label(terminalio.FONT, text=" ", color=ui.C_GREEN, scale=1)
         tl.anchor_point = (0.0, 0.0)
         tl.anchored_position = (2, TY[i])
         sc.append(tl)
         tlbls.append(tl)
 
-    IY = ui.CONTENT_Y + 60
+    IY = ui.CONTENT_Y + 120
     ui.solid_rect(sc, 0, IY - 1, W, 1, ui.C_GREEN_DIM)
     ui.solid_rect(sc, 0, IY, W, 18, ui.C_BG_PANEL)
     ui.solid_rect(sc, 0, IY + 18, W, 1, ui.C_GREEN_DIM)
@@ -277,31 +223,19 @@ def _editor(display, touch, W, H, path):
     slbl.anchored_position = (2, SY)
     sc.append(slbl)
 
-    key_areas = _build_keyboard(sc)
     ui.make_footer(sc, "^ SWIPE UP = SAVE & QUIT")
     display.root_group = sc
 
     def _refresh():
         all_lines = _wrap(text)
-        disp = all_lines[-4:] if len(all_lines) > 4 else all_lines
-        for i in range(4):
+        disp = all_lines[-8:] if len(all_lines) > 8 else all_lines
+        for i in range(8):
             tlbls[i].text = (disp[i][:36] if i < len(disp) else "") or " "
         last = all_lines[-1] if all_lines else ""
         ilbl.text = ("> " + last + "|")[:38]
         slbl.text = "{} chars".format(len(text))
 
     _refresh()
-
-    def _add_char(c):
-        nonlocal text
-        text += c
-        _refresh()
-
-    def _delete_char():
-        nonlocal text
-        if text:
-            text = text[:-1]
-            _refresh()
 
     # Init UART keyboard
     uart_kb = None
@@ -310,14 +244,28 @@ def _editor(display, touch, W, H, path):
             uart_kb = UartKeyboard()
             slbl.text = "0 chars [UART OK]"
         except Exception:
-            slbl.text = "0 chars [UART ERR]"
+            slbl.text = "0 chars [NO UART]"
 
     fd = False
     sx = sy = lx = ly = 0
 
     while True:
+        # Poll UART first (higher priority)
+        if uart_kb:
+            result = uart_kb.poll()
+            if result['char']:
+                text += result['char']
+                _refresh()
+            elif result['delete']:
+                if text:
+                    text = text[:-1]
+                    _refresh()
+            elif result['enter']:
+                text += "\n"
+                _refresh()
+
+        # Check touch (swipe up to quit)
         x, y, tch = touch.read()
-        time.sleep(0.03)
 
         if tch:
             lx, ly = x, y
@@ -339,36 +287,6 @@ def _editor(display, touch, W, H, path):
                 if uart_kb:
                     uart_kb.deinit()
                 break
-            for (x0, y0, x1, y1, kid, kpal) in key_areas:
-                if x0 <= sx <= x1 and y0 <= sy <= y1:
-                    kpal[0] = ui.C_GREEN_MID
-                    if kid == "DEL":
-                        _delete_char()
-                    elif kid == "ENT":
-                        text += "\n"
-                        _refresh()
-                    elif kid == "0":
-                        _add_char(" ")
-                    elif kid in _KEY_MAP:
-                        _add_char(_KEY_MAP[kid])
-                    break
-
-        # Reset key colors
-        for (x0, y0, x1, y1, kid, kpal) in key_areas:
-            kpal[0] = ui.C_BG_PANEL
-
-        # Poll UART keyboard
-        if uart_kb:
-            result = uart_kb.poll()
-            if result['enabled'] and not slbl.text.startswith("[UART"):
-                slbl.text = "{} chars [UART OK]".format(len(text))
-            if result['char']:
-                _add_char(result['char'])
-            elif result['delete']:
-                _delete_char()
-            elif result['enter']:
-                text += "\n"
-                _refresh()
 
     display.root_group = displayio.Group()
     del sc

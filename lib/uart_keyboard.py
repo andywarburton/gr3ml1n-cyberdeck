@@ -17,23 +17,29 @@ _KEYCODE_MAP = {
     "KC.Q": "q", "KC.R": "r", "KC.S": "s", "KC.T": "t",
     "KC.U": "u", "KC.V": "v", "KC.W": "w", "KC.X": "x",
     "KC.Y": "y", "KC.Z": "z",
-    "KC.N0": "0", "KC.N1": "1", "KC.N2": "2", "KC.N3": "3",
-    "KC.N4": "4", "KC.N5": "5", "KC.N6": "6", "KC.N7": "7",
-    "KC.N8": "8", "KC.N9": "9",
+    "KC.N1": "1", "KC.N2": "2", "KC.N3": "3",
+    "KC.N4": "4", "KC.N5": "5", "KC.N6": "6",
+    "KC.N7": "7", "KC.N8": "8", "KC.N9": "9", "KC.N0": "0",
     "KC.SPACE": " ",
     "KC.MINUS": "-", "KC.EQUAL": "=",
     "KC.LBRACKET": "[", "KC.RBRACKET": "]",
     "KC.BSLASH": "\\", "KC.SCOLON": ";", "KC.QUOTE": "'",
     "KC.GRAVE": "`", "KC.COMMA": ",", "KC.DOT": ".", "KC.SLASH": "/",
+    "8": "1", "25": "2", "9": "3", "21": "4", "33": "5",
+    "32": "6", "26": "7", "22": "8", "27": "9", "6": "0",
 }
 
-_DELETE_KEYS = {"KC.BKSP", "KC.DELETE", "KC.DEL"}
+_DELETE_KEYS = {"KC.BKSP", "KC.DELETE", "KC.DEL", "7"}
 _ENTER_KEY = "KC.ENTER"
 
 
 class UartKeyboard:
     def __init__(self, rx=board.RX, tx=board.TX, baudrate=_UART_BAUD):
-        self._uart = busio.UART(rx, tx, baudrate=baudrate, timeout=0.01)
+        try:
+            self._uart = busio.UART(tx=tx, rx=rx, baudrate=baudrate, timeout=0)
+        except Exception as e:
+            print(f"UART init error: {e}")
+            raise
         self._buffer = ""
         self._enabled = False
         self._pressed_keys = set()
@@ -53,9 +59,9 @@ class UartKeyboard:
         }
         
         try:
-            data = self._uart.read(64)
+            data = self._uart.read(256)
             if data:
-                self._buffer += data.decode('utf-8', errors='ignore')
+                self._buffer += data.decode('utf-8', 'ignore')
         except Exception:
             pass
 
@@ -70,12 +76,18 @@ class UartKeyboard:
                 action, keycode = line.split(':', 1)
                 
                 if keycode in _DELETE_KEYS:
+                    print(f"DEL")
                     result['delete'] = True
                 elif keycode == _ENTER_KEY:
+                    print(f"ENTER")
                     result['enter'] = True
                 elif action == 'P' and keycode in _KEYCODE_MAP:
-                    result['char'] = _KEYCODE_MAP[keycode]
+                    c = _KEYCODE_MAP[keycode]
+                    print(f"CHAR: {c}")
+                    result['char'] = c
                     self._pressed_keys.add(keycode)
+                elif action == 'P':
+                    print(f"???: {keycode}")
                 elif action == 'R':
                     self._pressed_keys.discard(keycode)
 
