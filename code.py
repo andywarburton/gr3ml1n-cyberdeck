@@ -25,33 +25,11 @@ from waveshare_touch import WaveshareTouch, classify_gesture
 from uart_keyboard import get_keyboard
 import cyber_ui as ui
 
-# ── Portrait mode ──────────────────────────────────────────────────────────────
-# rotation=90  → 90° clockwise  (right side of landscape becomes top of portrait)
-# rotation=270 → 90° counter-clockwise (swap if display appears upside-down)
-_ROTATION = 90
-
-display = board.DISPLAY
-display.rotation = _ROTATION
-W = display.width    # 240 after rotation
-H = display.height   # 320 after rotation
-
-touch = WaveshareTouch(board.TP_SCL, board.TP_SDA, board.TP_RST, rotation=_ROTATION)
-
-# ── Boot animation ─────────────────────────────────────────────────────────────
-_boot = displayio.Group()
-ui.boot_glitch(display, _boot)
-gc.collect()
-
 # ── App paths ─────────────────────────────────────────────────────────────────
 APPS_PATHS = ["/sd/apps", "/apps"]   # SD card first, flash as fallback
 
-# ── Menu constants ─────────────────────────────────────────────────────────────
-TILE_H   = 42
-TILE_GAP = 3
-MAX_VIS  = 5   # max tiles visible per page in portrait
 
-
-# ── App discovery ──────────────────────────────────────────────────────────────
+# ── App discovery ─────────────────────────────────────────────────────────────
 def discover_apps():
     apps = []
     seen = set()
@@ -74,6 +52,39 @@ def discover_apps():
                 pass
     apps.sort(key=lambda a: (a.get("order", 99), a.get("name", "")))
     return apps
+
+
+# ── List apps in REPL ────────────────────────────────────────────────────────
+print("Loading apps...")
+apps = discover_apps()
+for i, app in enumerate(apps):
+    num = str(i + 1).zfill(2)
+    name = app.get("name", "???").ljust(20)
+    desc = app.get("description", "")[:30]
+    print(f"  [{num}] {name} - {desc}")
+print(f"Total: {len(apps)} apps\n")
+
+# ── Portrait mode ──────────────────────────────────────────────────────────────
+# rotation=90  → 90° clockwise  (right side of landscape becomes top of portrait)
+# rotation=270 → 90° counter-clockwise (swap if display appears upside-down)
+_ROTATION = 90
+
+display = board.DISPLAY
+display.rotation = _ROTATION
+W = display.width    # 240 after rotation
+H = display.height   # 320 after rotation
+
+touch = WaveshareTouch(board.TP_SCL, board.TP_SDA, board.TP_RST, rotation=_ROTATION)
+
+# ── Boot animation ─────────────────────────────────────────────────────────────
+_boot = displayio.Group()
+ui.boot_glitch(display, _boot)
+gc.collect()
+
+# ── Menu constants ─────────────────────────────────────────────────────────────
+TILE_H   = 42
+TILE_GAP = 3
+MAX_VIS  = 5   # max tiles visible per page in portrait
 
 
 # ── Error screen ───────────────────────────────────────────────────────────────
