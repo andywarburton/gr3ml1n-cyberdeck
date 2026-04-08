@@ -170,9 +170,9 @@ def build_scene(apps, page, selected_idx=0):
         scene.append(msg)
 
     if total_pages > 1:
-        footer_hint = "< PAGE " + str(page + 1) + "/" + str(total_pages) + " > SWIPE L/R | UP/DOWN+ENTER"
+        footer_hint = "SPACE/BKSP=PAGE  |  UP/DOWN+ENTER"
     else:
-        footer_hint = "TAP OR ENTER  |  ESC=REFRESH"
+        footer_hint = "UP/DOWN=NAV  |  ENTER=LAUNCH  |  ESC=REFRESH"
     ui.make_footer(scene, footer_hint)
 
     return scene, tiles, total_pages
@@ -216,6 +216,12 @@ def run_launcher():
             elif kbd['escape']:
                 apps = discover_apps()
                 selected_idx = min(selected_idx, len(apps) - 1)
+                rebuild = True
+            elif kbd['char'] == ' ' and total_pages > 1:
+                page = min(page + 1, total_pages - 1)
+                rebuild = True
+            elif kbd['delete'] and total_pages > 1:
+                page = max(page - 1, 0)
                 rebuild = True
 
             if touching:
