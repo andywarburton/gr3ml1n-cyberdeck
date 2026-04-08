@@ -230,8 +230,9 @@ def _editor(display, touch, keyboard, W, H, path):
     _refresh()
 
     uart_kb = keyboard if keyboard else None
-    if uart_kb and keyboard._enabled:
-        slbl.text = "0 chars [UART OK]"
+    print("text_input: uart_kb = " + str(uart_kb))
+    if uart_kb:
+        slbl.text = "0 chars [READY]"
     else:
         slbl.text = "0 chars [NO UART]"
 
@@ -242,6 +243,7 @@ def _editor(display, touch, keyboard, W, H, path):
         if uart_kb:
             result = uart_kb.poll()
             if result['char']:
+                print("APP: got char '" + result['char'] + "'")
                 text += result['char']
                 _refresh()
             elif result['delete']:

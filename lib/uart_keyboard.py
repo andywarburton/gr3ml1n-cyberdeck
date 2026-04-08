@@ -1,37 +1,33 @@
 # uart_keyboard.py - UART keyboard input reader
-# Reads keycodes from KMK firmware over UART
-# Protocol: P:KEYCODE\r\n (pressed), R:KEYCODE\r\n (released)
+# Reads USB HID keycodes from KMK firmware over UART
+# Protocol: Press:KeyboardKey(code=XX)\r\n, Release:KeyboardKey(code=XX)\r\n
 
 import board
 import busio
 
 _UART_BAUD = 115200
 
-_KEYCODE_MAP = {
-    "KC.A": "a", "KC.B": "b", "KC.C": "c", "KC.D": "d",
-    "KC.E": "e", "KC.F": "f", "KC.G": "g", "KC.H": "h",
-    "KC.I": "i", "KC.J": "j", "KC.K": "k", "KC.L": "l",
-    "KC.M": "m", "KC.N": "n", "KC.O": "o", "KC.P": "p",
-    "KC.Q": "q", "KC.R": "r", "KC.S": "s", "KC.T": "t",
-    "KC.U": "u", "KC.V": "v", "KC.W": "w", "KC.X": "x",
-    "KC.Y": "y", "KC.Z": "z",
-    "KC.N1": "1", "KC.N2": "2", "KC.N3": "3",
-    "KC.N4": "4", "KC.N5": "5", "KC.N6": "6",
-    "KC.N7": "7", "KC.N8": "8", "KC.N9": "9", "KC.N0": "0",
-    "KC.SPACE": " ",
-    "KC.MINUS": "-", "KC.EQUAL": "=",
-    "KC.LBRACKET": "[", "KC.RBRACKET": "]",
-    "KC.BSLASH": "\\", "KC.SCOLON": ";", "KC.QUOTE": "'",
-    "KC.GRAVE": "`", "KC.COMMA": ",", "KC.DOT": ".", "KC.SLASH": "/",
-    "8": "1", "25": "2", "9": "3", "21": "4", "33": "5",
-    "32": "6", "26": "7", "22": "8", "27": "9", "6": "0",
+# USB HID keycode to character mapping (codes 4-31 = a-z, 30-39 = 0-9)
+_HID_MAP = {
+    4: "a", 5: "b", 6: "c", 7: "d", 8: "e", 9: "f", 10: "g", 11: "h",
+    12: "i", 13: "j", 14: "k", 15: "l", 16: "m", 17: "n", 18: "o", 19: "p",
+    20: "q", 21: "r", 22: "s", 23: "t", 24: "u", 25: "v", 26: "w", 27: "x",
+    28: "y", 29: "z",
+    30: "1", 31: "2", 32: "3", 33: "4", 34: "5", 35: "6", 36: "7", 37: "8",
+    38: "9", 39: "0",
+    40: "_ENTER",  # Enter
+    41: "_ESC",    # Escape
+    42: "_BKSP",   # Backspace
+    44: " ",       # Space
+    45: "-", 47: "=", 46: "`",
+    54: ",", 55: ".", 56: "/",
+    47: "[", 48: "]", 49: "\\",
+    51: ";", 52: "'",
 }
 
-_DELETE_KEYS = {"KC.BKSP", "KC.DELETE", "KC.DEL", "7"}
-_ENTER_KEY = "KC.ENTER"
-_NAV_KEYS = {"KC.UP", "KC.DOWN", "KC.ESC", "KC.ESCAPE"}
-
 _instance = None
+
+print("uart_keyboard module loaded")
 
 
 def get_keyboard():
@@ -41,15 +37,27 @@ def get_keyboard():
     return _instance
 
 
+def _parse_code(s):
+    """Extract keycode number from 'KeyboardKey(code=13)' string."""
+    try:
+        start = s.find("code=")
+        if start >= 0:
+            num_str = s[start + 5:]
+            num_str = num_str.split(")")[0].strip()
+            return int(num_str)
+    except (ValueError, IndexError):
+        pass
+    return None
+
+
 class UartKeyboard:
     def __init__(self, rx=board.RX, tx=board.TX, baudrate=_UART_BAUD):
         self._uart = None
         try:
             self._uart = busio.UART(tx=tx, rx=rx, baudrate=baudrate, timeout=0)
         except Exception as e:
-            print(f"UART init error: {e}")
+            print("UART init error: " + str(e))
         self._buffer = ""
-        self._enabled = False
 
     def poll(self):
         result = {
@@ -59,7 +67,6 @@ class UartKeyboard:
             'up': False,
             'down': False,
             'escape': False,
-            'enabled': self._enabled
         }
         
         if self._uart is None:
@@ -74,26 +81,24 @@ class UartKeyboard:
 
         while '\r\n' in self._buffer:
             line, self._buffer = self._buffer.split('\r\n', 1)
+            print("KBD line: " + line)
             
-            if line == "UART_ENABLED":
-                self._enabled = True
-            elif line == "UART_DISABLED":
-                self._enabled = False
-            elif ':' in line:
-                action, keycode = line.split(':', 1)
-                
-                if keycode in _DELETE_KEYS:
-                    result['delete'] = True
-                elif keycode == _ENTER_KEY:
-                    result['enter'] = True
-                elif keycode in _NAV_KEYS:
-                    if action == 'P':
-                        if keycode in ("KC.UP", "KC.ESC", "KC.ESCAPE"):
-                            result['up' if keycode == "KC.UP" else 'escape'] = True
-                        elif keycode == "KC.DOWN":
-                            result['down'] = True
-                elif action == 'P' and keycode in _KEYCODE_MAP:
-                    result['char'] = _KEYCODE_MAP[keycode]
+            if line.startswith("Press:"):
+                code = _parse_code(line)
+                print("KBD parsed code: " + str(code))
+                if code is not None:
+                    print("KBD Press: code=" + str(code))
+                    if code in _HID_MAP:
+                        val = _HID_MAP[code]
+                        if val.startswith("_"):
+                            if val == "_ENTER":
+                                result['enter'] = True
+                            elif val == "_ESC":
+                                result['escape'] = True
+                            elif val == "_BKSP":
+                                result['delete'] = True
+                        else:
+                            result['char'] = val
 
         return result
 
