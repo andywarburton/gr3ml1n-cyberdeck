@@ -55,6 +55,32 @@ def _next_auto_name(existing):
     return "note_{:03d}.txt".format(n)
 
 
+def _sanitize_name(s):
+    """Convert name to safe filename (alphanumeric, dash, underscore)."""
+    out = []
+    for ch in s.lower():
+        if ('a' <= ch <= 'z') or ('0' <= ch <= '9') or ch == '-' or ch == '_':
+            out.append(ch)
+        elif ch == ' ':
+            out.append('_')
+    stem = ''.join(out).strip('_')[:20]
+    return stem or None
+
+
+def _unique_name(stem, existing):
+    """Return stem.txt (or stem_2.txt etc.) not already in existing set."""
+    existing_set = set(existing)
+    candidate = stem + ".txt"
+    if candidate not in existing_set:
+        return candidate
+    n = 2
+    while True:
+        candidate = "{}_{}.txt".format(stem, n)
+        if candidate not in existing_set:
+            return candidate
+        n += 1
+
+
 def _read(path):
     try:
         with open(path) as fh:
@@ -84,6 +110,88 @@ def _wrap(text, w=_LINE_CHARS):
                 raw = raw[w:]
             out.append(raw)
     return out
+
+
+# ── Name entry screen ─────────────────────────────────────────────────────────
+
+def _name_screen(display, touch, keyboard, W, H):
+    """Get filename from keyboard. Returns filename or None if cancelled."""
+    name = ""
+    uart_kb = keyboard if keyboard else None
+
+    sc = displayio.Group()
+    ui.make_title_bar(sc, "TEXT INPUT:NAME", "")
+    ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
+
+    prompt = label.Label(terminalio.FONT, text="TYPE FILENAME",
+                         color=ui.C_GREEN_MID, scale=1)
+    prompt.anchor_point = (0.5, 0.5)
+    prompt.anchored_position = (W // 2, 38)
+    sc.append(prompt)
+
+    NB_Y = 55
+    ui.solid_rect(sc, 4, NB_Y - 1, W - 8, 1, ui.C_GREEN_DIM)
+    ui.solid_rect(sc, 4, NB_Y, W - 8, 24, ui.C_BG_PANEL)
+    ui.solid_rect(sc, 4, NB_Y + 24, W - 8, 1, ui.C_GREEN_DIM)
+    nlbl = label.Label(terminalio.FONT, text="> |",
+                       color=ui.C_GREEN_HI, scale=2)
+    nlbl.anchor_point = (0.0, 0.5)
+    nlbl.anchored_position = (8, NB_Y + 12)
+    sc.append(nlbl)
+
+    hint = label.Label(terminalio.FONT,
+                       text="ENTER=CONFIRM  SWIPE UP=CANCEL",
+                       color=ui.C_GREEN_DIM, scale=1)
+    hint.anchor_point = (0.5, 0.5)
+    hint.anchored_position = (W // 2, 96)
+    sc.append(hint)
+
+    ui.make_footer(sc, "TYPE NAME OR SWIPE UP")
+    display.root_group = sc
+
+    def _refresh():
+        nlbl.text = ("> " + name + "|")
+
+    fd = False
+    sx = sy = lx = ly = 0
+
+    while True:
+        if uart_kb:
+            result = uart_kb.poll()
+            if result['char']:
+                if len(name) < 20:
+                    name += result['char']
+                    _refresh()
+            elif result['delete']:
+                if name:
+                    name = name[:-1]
+                    _refresh()
+            elif result['enter']:
+                display.root_group = displayio.Group()
+                del sc
+                gc.collect()
+                if name.strip():
+                    return name.strip()
+                return None
+
+        x, y, tch = touch.read()
+
+        if tch:
+            lx, ly = x, y
+            if not fd:
+                fd = True
+                sx, sy = x, y
+        elif fd:
+            fd = False
+            g = classify_gesture(sx, sy, lx, ly, W, H,
+                swipe_edge=ui.SWIPE_EDGE, swipe_min_dist=ui.SWIPE_MIN)
+            if g and g[0] == "SWIPE UP":
+                display.root_group = displayio.Group()
+                del sc
+                gc.collect()
+                return None
+
+        time.sleep(0.03)
 
 
 # ── List screen ──────────────────────────────────────────────────────────────
@@ -230,7 +338,6 @@ def _editor(display, touch, keyboard, W, H, path):
     _refresh()
 
     uart_kb = keyboard if keyboard else None
-    print("text_input: uart_kb = " + str(uart_kb))
     if uart_kb:
         slbl.text = "0 chars [READY]"
     else:
@@ -243,7 +350,6 @@ def _editor(display, touch, keyboard, W, H, path):
         if uart_kb:
             result = uart_kb.poll()
             if result['char']:
-                print("APP: got char '" + result['char'] + "'")
                 text += result['char']
                 _refresh()
             elif result['delete']:
@@ -291,8 +397,14 @@ def run(display, touch, keyboard, W, H):
         if res[0] == "quit":
             break
         elif res[0] == "new":
-            fname = _next_auto_name(_list_files())
-            _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname)
+            raw_name = _name_screen(display, touch, keyboard, W, H)
+            if raw_name:
+                stem = _sanitize_name(raw_name)
+                if stem:
+                    fname = _unique_name(stem, _list_files())
+                else:
+                    fname = _next_auto_name(_list_files())
+                _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname)
         elif res[0] == "edit":
             _editor(display, touch, keyboard, W, H, res[1])
     display.root_group = displayio.Group()
