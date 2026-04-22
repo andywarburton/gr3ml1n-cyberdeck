@@ -35,7 +35,7 @@ C_RED_DIM   = 0x220000
 C_WHITE     = 0xDDFFDD
 
 # ── Theme definitions ──────────────────────────────────────────────────────────
-THEME_NAMES = ["green", "amber", "red", "purple", "grey", "paper"]
+THEME_NAMES = ["green", "amber", "red", "purple", "grey", "paper", "retrowave"]
 
 THEMES = {
     "green": {
@@ -103,6 +103,17 @@ THEMES = {
         "primary":   0xC65D3B,
         "hi":        0x4A3520,
         "glow":      0xD2691E,
+    },
+    "retrowave": {
+        "bg":        0x08001A,
+        "bg_scan":   0x04000D,
+        "bg_panel":  0x120030,
+        "bg_header": 0x1C0044,
+        "dim":       0x8833AA,
+        "mid":       0xBB44CC,
+        "primary":   0xFF2D78,
+        "hi":        0xFF88FF,
+        "glow":      0xAADDFF,
     },
 }
 
@@ -284,7 +295,7 @@ def boot_glitch(display, group):
         scan_pal[1] = C_BG_SCAN
         time.sleep(0.03)
 
-    full = ">> CYBERDECK OS v1.0 <<"
+    full = ">> [GR3ML1N] v1.0 <<"
     t_lbl = label.Label(terminalio.FONT, text=" ", color=C_GREEN_HI, scale=2)
     t_lbl.anchor_point = (0.5, 0.5)
     t_lbl.anchored_position = (W // 2, H // 2 - 14)

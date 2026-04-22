@@ -130,7 +130,7 @@ def tap_to_app(sx, sy, tiles):
 # ── Build menu scene ───────────────────────────────────────────────────────────
 def build_scene(apps, page, selected_idx=0):
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:LAUNCHER", "CYBERDECK OS")
+    ui.make_title_bar(scene, "SYS:LAUNCHER", "[GR3ML1N]")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     total_pages = max(1, (len(apps) + MAX_VIS - 1) // MAX_VIS)

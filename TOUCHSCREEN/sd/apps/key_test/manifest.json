@@ -1,0 +1,7 @@
+{
+  "name": "KEY TEST",
+  "description": "Keyboard HID keycode tester",
+  "version": "1.0",
+  "author": "SYS",
+  "order": 8
+}

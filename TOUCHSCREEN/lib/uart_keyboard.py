@@ -23,8 +23,10 @@ _HID_MAP = {
     54: ",", 55: ".", 56: "/",
     47: "[", 48: "]", 49: "\\",
     51: ";", 52: "'",
-    82: "_UP",     # Up arrow
+    79: "_RIGHT",   # Right arrow
+    80: "_LEFT",    # Left arrow
     81: "_DOWN",    # Down arrow
+    82: "_UP",      # Up arrow
 }
 
 _instance = None
@@ -68,7 +70,10 @@ class UartKeyboard:
             'enter': False,
             'up': False,
             'down': False,
+            'left': False,
+            'right': False,
             'escape': False,
+            'keycode': None,
         }
         
         if self._uart is None:
@@ -87,6 +92,7 @@ class UartKeyboard:
             if line.startswith("Press:"):
                 code = _parse_code(line)
                 if code is not None:
+                    result['keycode'] = code
                     if code in _HID_MAP:
                         val = _HID_MAP[code]
                         if val.startswith("_"):
@@ -100,6 +106,10 @@ class UartKeyboard:
                                 result['up'] = True
                             elif val == "_DOWN":
                                 result['down'] = True
+                            elif val == "_LEFT":
+                                result['left'] = True
+                            elif val == "_RIGHT":
+                                result['right'] = True
                         else:
                             result['char'] = val
 
