@@ -7,6 +7,8 @@ import time
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 # ── Layout constants ──────────────────────────────────────────────────────────
 _E          = ui.SWIPE_EDGE                    # 35 px edge-zone depth
@@ -21,8 +23,11 @@ _BTN_X0     = (ui.W - (3 * _BTN_W + 2 * _BTN_GAP)) // 2   # 12
 
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:TOUCH TEST", "v1.0")
+    ui.make_title_bar(scene, "SYS:TOUCH TEST", "v1.0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     # ── Top swipe-down zone (y=21..56) ────────────────────────────────────

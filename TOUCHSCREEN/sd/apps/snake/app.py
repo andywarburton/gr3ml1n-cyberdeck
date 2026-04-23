@@ -13,6 +13,8 @@ import gc
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 # ── Grid constants ─────────────────────────────────────────────────────────────
 COLS = 20   # 20 × 12px = 240px at scale=2 (exact screen width)
@@ -105,10 +107,13 @@ def run(display, touch, keyboard, W, H):
      score, grow_pending, frame_counter, move_interval) = _new_game()
 
     state = "playing"
+    batt = BatteryMonitor()
 
     # Build scene once — only label text changes during play
     scene = displayio.Group()
-    title_lbl, score_lbl = ui.make_title_bar(scene, "SNAKE", "SCORE:0")
+    title_lbl, score_lbl = ui.make_title_bar(scene, "SNAKE", "SCORE:0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     game_lbl = label.Label(terminalio.FONT, text=_render(grid),

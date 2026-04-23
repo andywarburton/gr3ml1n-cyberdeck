@@ -9,6 +9,8 @@ import gc
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 try:
     from adafruit_ble import BLERadio
@@ -20,8 +22,11 @@ except Exception as e:
 
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     sc = displayio.Group()
-    ui.make_title_bar(sc, "SYS:BT SCANNER", "v1.0")
+    ui.make_title_bar(sc, "SYS:BT SCANNER", "v1.0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     if not _HAS_BLE:

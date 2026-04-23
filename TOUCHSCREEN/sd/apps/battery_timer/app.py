@@ -11,6 +11,8 @@ import os
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 _LOG_FILE = "/sd/apps/battery_timer/log.txt"
 
@@ -232,7 +234,7 @@ def _wrap_lines(text, max_chars=28):
 
 # ── View log screen ─────────────────────────────────────────────────----------
 
-def _view_log_screen(display, touch, keyboard, W, H):
+def _view_log_screen(display, touch, keyboard, W, H, batt):
     content = _read_log()
     lines = _wrap_lines(content) if content else ["(empty)"]
     scroll = 0
@@ -240,7 +242,9 @@ def _view_log_screen(display, touch, keyboard, W, H):
 
     while True:
         sc = displayio.Group()
-        ui.make_title_bar(sc, "BATTERY TIMER:LOG", "{}L".format(len(lines)))
+        ui.make_title_bar(sc, "BATTERY TIMER:LOG", "{}L".format(len(lines)),
+            time_str=timekeeper.now_str(),
+            battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
         ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
         for i in range(max_visible):
@@ -306,6 +310,7 @@ def _view_log_screen(display, touch, keyboard, W, H):
 # ── App entry point ─────────────────────────────────────────────────----------
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     # ── Detect time source ─────────────────────────────────────────-----
     rtc_name = _try_external_rtc()
     tz = _get_tz()
@@ -322,7 +327,9 @@ def run(display, touch, keyboard, W, H):
 
     # ── Build scene ─────────────────────────────────---------------------
     sc = displayio.Group()
-    ui.make_title_bar(sc, "SYS:BATTERY TIMER", "v1.0")
+    ui.make_title_bar(sc, "SYS:BATTERY TIMER", "v1.0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     src_lbl = label.Label(terminalio.FONT, text="SRC: " + source,
@@ -470,7 +477,7 @@ def run(display, touch, keyboard, W, H):
                         _update_size()
                 elif view_x <= sx <= view_x + view_w and view_y <= sy <= view_y + view_h:
                     _update_size()
-                    _view_log_screen(display, touch, keyboard, W, H)
+                    _view_log_screen(display, touch, keyboard, W, H, batt)
 
     # Clean up
     if log_fh:

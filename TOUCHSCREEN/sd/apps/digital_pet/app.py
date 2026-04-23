@@ -14,6 +14,8 @@ import math
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 import names
 import pets
 
@@ -229,6 +231,7 @@ class SpriteRenderer:
 
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     _ensure_dir()
     save = _load_save()
     HAS_AUD = False
@@ -278,9 +281,9 @@ def run(display, touch, keyboard, W, H):
 
     try:
         if save["state"] == "egg":
-            _run_egg(display, touch, keyboard, W, H, save, _play_tap, _play_crack, _play_hatch)
+            _run_egg(display, touch, keyboard, W, H, save, _play_tap, _play_crack, _play_hatch, batt)
         else:
-            _run_monster(display, touch, keyboard, W, H, save, _play_boop)
+            _run_monster(display, touch, keyboard, W, H, save, _play_boop, batt)
     finally:
         if _audio:
             try:
@@ -295,7 +298,7 @@ def run(display, touch, keyboard, W, H):
         gc.collect()
 
 
-def _run_egg(display, touch, keyboard, W, H, save, _play_tap, _play_crack, _play_hatch):
+def _run_egg(display, touch, keyboard, W, H, save, _play_tap, _play_crack, _play_hatch, batt):
     taps = save.get("taps", 0)
     hatch_at = save.get("hatch_at", random.randint(11, 49))
 
@@ -303,7 +306,9 @@ def _run_egg(display, touch, keyboard, W, H, save, _play_tap, _play_crack, _play
     egg_cy = 160
 
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:DIGITAL PET", "v1.0")
+    ui.make_title_bar(scene, "SYS:DIGITAL PET", "v1.0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     EGG_COLOR_MAP = {
@@ -436,7 +441,7 @@ def _run_egg(display, touch, keyboard, W, H, save, _play_tap, _play_crack, _play
                         save["hatch_at"] = random.randint(11, 49)
                         _write_save(save)
                         _run_hatch(display, touch, keyboard, W, H,
-                                   save, _play_hatch)
+                                   save, _play_hatch, batt)
                         return
 
     display.root_group = displayio.Group()
@@ -444,9 +449,11 @@ def _run_egg(display, touch, keyboard, W, H, save, _play_tap, _play_crack, _play
     gc.collect()
 
 
-def _run_hatch(display, touch, keyboard, W, H, save, _play_hatch):
+def _run_hatch(display, touch, keyboard, W, H, save, _play_hatch, batt):
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:DIGITAL PET", "v1.0")
+    ui.make_title_bar(scene, "SYS:DIGITAL PET", "v1.0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     egg_cx = W // 2
@@ -571,7 +578,7 @@ def _run_hatch(display, touch, keyboard, W, H, save, _play_hatch):
     gc.collect()
 
 
-def _run_monster(display, touch, keyboard, W, H, save, _play_boop):
+def _run_monster(display, touch, keyboard, W, H, save, _play_boop, batt):
     monster_type = save.get("monster_type", 0)
     monster_type = min(monster_type, len(pets.MONSTERS) - 1)
     monster = pets.MONSTERS[monster_type]
@@ -579,7 +586,9 @@ def _run_monster(display, touch, keyboard, W, H, save, _play_boop):
     gender = save.get("gender", "male")
 
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:DIGITAL PET", "v1.0")
+    ui.make_title_bar(scene, "SYS:DIGITAL PET", "v1.0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     name_lbl = label.Label(terminalio.FONT,

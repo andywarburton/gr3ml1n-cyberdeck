@@ -10,6 +10,8 @@ import json
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 from uart_keyboard import get_keyboard
 
 _PRESET = "@preset/free-chat-agents"
@@ -206,13 +208,16 @@ def _render_history(history_lbls, flat_lines, scroll_offset, max_visible, W):
 
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     keyboard = get_keyboard()
     print("AI: App started")
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         print("AI: ERROR: No API key found")
         sc = displayio.Group()
-        ui.make_title_bar(sc, "AI CHAT", "v1.0")
+        ui.make_title_bar(sc, "AI CHAT", "v1.0",
+            time_str=timekeeper.now_str(),
+            battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
         ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
         lbl = label.Label(terminalio.FONT, text="ERROR: OPENROUTER_API_KEY not set",
                           color=ui.C_AMBER, scale=1)
@@ -233,7 +238,9 @@ def run(display, touch, keyboard, W, H):
         print("AI: WiFi OK:", status)
     if not radio:
         sc = displayio.Group()
-        ui.make_title_bar(sc, "AI CHAT", "v1.0")
+        ui.make_title_bar(sc, "AI CHAT", "v1.0",
+            time_str=timekeeper.now_str(),
+            battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
         ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
         lbl = label.Label(terminalio.FONT, text="ERROR: WiFi " + status,
                           color=ui.C_AMBER, scale=1)
@@ -262,7 +269,9 @@ def run(display, touch, keyboard, W, H):
     HISTORY_TOP = ui.CONTENT_Y + 2
 
     sc = displayio.Group()
-    _, title_right = ui.make_title_bar(sc, "AI CHAT", "ready")
+    _, title_right = ui.make_title_bar(sc, "AI CHAT", "ready",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     history_lbls = []

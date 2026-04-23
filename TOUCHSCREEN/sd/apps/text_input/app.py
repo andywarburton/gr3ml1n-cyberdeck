@@ -10,6 +10,8 @@ import gc
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 try:
     from uart_keyboard import get_keyboard
@@ -114,13 +116,15 @@ def _wrap(text, w=_LINE_CHARS):
 
 # ── Name entry screen ─────────────────────────────────────────────────────────
 
-def _name_screen(display, touch, keyboard, W, H):
+def _name_screen(display, touch, keyboard, W, H, batt):
     """Get filename from keyboard. Returns filename or None if cancelled."""
     name = ""
     uart_kb = keyboard if keyboard else None
 
     sc = displayio.Group()
-    ui.make_title_bar(sc, "TEXT INPUT:NAME", "")
+    ui.make_title_bar(sc, "TEXT INPUT:NAME", "",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     prompt = label.Label(terminalio.FONT, text="TYPE FILENAME",
@@ -201,7 +205,7 @@ def _name_screen(display, touch, keyboard, W, H):
 
 # ── List screen ──────────────────────────────────────────────────────────────
 
-def _list_screen(display, touch, W, H):
+def _list_screen(display, touch, W, H, batt):
     page = 0
 
     while True:
@@ -212,7 +216,9 @@ def _list_screen(display, touch, W, H):
         vis = files[page * 5: page * 5 + 5]
 
         sc = displayio.Group()
-        ui.make_title_bar(sc, "SYS:TEXT INPUT", "v1.0")
+        ui.make_title_bar(sc, "SYS:TEXT INPUT", "v1.0",
+            time_str=timekeeper.now_str(),
+            battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
         ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
         NEW_Y = ui.CONTENT_Y
@@ -305,12 +311,14 @@ def _list_screen(display, touch, W, H):
 
 # ── Editor ──────────────────────────────────────────────────────────────────
 
-def _editor(display, touch, keyboard, W, H, path):
+def _editor(display, touch, keyboard, W, H, path, batt):
     text = _read(path)
     name = path.split("/")[-1][:-4].replace('_', ' ').upper()
 
     sc = displayio.Group()
-    ui.make_title_bar(sc, "TEXT INPUT:EDIT", name)
+    ui.make_title_bar(sc, "TEXT INPUT:EDIT", name,
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     LINE_H = 18
@@ -402,20 +410,21 @@ def _editor(display, touch, keyboard, W, H, path):
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     _ensure_dir()
     while True:
-        res = _list_screen(display, touch, W, H)
+        res = _list_screen(display, touch, W, H, batt)
         if res[0] == "quit":
             break
         elif res[0] == "new":
-            raw_name = _name_screen(display, touch, keyboard, W, H)
+            raw_name = _name_screen(display, touch, keyboard, W, H, batt)
             if raw_name:
                 stem = _sanitize_name(raw_name)
                 if stem:
                     fname = _unique_name(stem, _list_files())
                 else:
                     fname = _next_auto_name(_list_files())
-                _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname)
+                _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname, batt)
         elif res[0] == "edit":
-            _editor(display, touch, keyboard, W, H, res[1])
+            _editor(display, touch, keyboard, W, H, res[1], batt)
     display.root_group = displayio.Group()

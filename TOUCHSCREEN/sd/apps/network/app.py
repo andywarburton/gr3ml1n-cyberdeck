@@ -13,6 +13,8 @@ import gc
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 # ── Layout constants ──────────────────────────────────────────────────────────
 _TOGGLE_Y = ui.CONTENT_Y        # 21  — WiFi on/off button
@@ -121,11 +123,14 @@ def _sig_str(rssi):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     networks = []
     page     = 0
 
     sc = displayio.Group()
-    ui.make_title_bar(sc, "SYS:NETWORK", "v1.0")
+    ui.make_title_bar(sc, "SYS:NETWORK", "v1.0",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     # ── WiFi toggle button ─────────────────────────────────────────────────

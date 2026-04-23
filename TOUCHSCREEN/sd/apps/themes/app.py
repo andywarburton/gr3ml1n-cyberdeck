@@ -11,6 +11,8 @@ import time
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 # ── Layout ─────────────────────────────────────────────────────────────────────
 _BTN_H   = 46
@@ -49,14 +51,16 @@ def _themes_on_page(page):
     return ui.THEME_NAMES[start:start + THEMES_PER_PAGE]
 
 
-def _build_scene(display, W, active, cursor_global, page):
+def _build_scene(display, W, active, cursor_global, page, batt):
     total_pages = _total_pages()
     themes_on_page = _themes_on_page(page)
     cursor_local = cursor_global - page * THEMES_PER_PAGE
 
     scene = displayio.Group()
     ui.make_title_bar(scene, "SYS:THEMES",
-                      "{}/{}".format(page + 1, total_pages))
+                      "{}/{}".format(page + 1, total_pages),
+                      time_str=timekeeper.now_str(),
+                      battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     # Status label
@@ -121,6 +125,7 @@ def _build_scene(display, W, active, cursor_global, page):
 
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     active = ui.get_active_theme()
     total  = len(ui.THEME_NAMES)
 
@@ -129,7 +134,7 @@ def run(display, touch, keyboard, W, H):
     page          = _page_for(cursor_global)
     total_pages   = _total_pages()
 
-    scene, status_lbl, btn_info = _build_scene(display, W, active, cursor_global, page)
+    scene, status_lbl, btn_info = _build_scene(display, W, active, cursor_global, page, batt)
 
     finger_down   = False
     sx = sy = lx = ly = 0
@@ -138,7 +143,7 @@ def run(display, touch, keyboard, W, H):
     while True:
         if needs_rebuild:
             scene, status_lbl, btn_info = _build_scene(
-                display, W, active, cursor_global, page)
+                display, W, active, cursor_global, page, batt)
             needs_rebuild = False
 
         if keyboard:

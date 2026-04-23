@@ -10,6 +10,8 @@ import gc
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
 import cyber_ui as ui
+from battery_monitor import BatteryMonitor
+import timekeeper
 
 _DATA_DIR   = "/sd/apps/notes/data"
 _T9_TIMEOUT = 0.8
@@ -229,7 +231,7 @@ def _run_t9_loop(display, touch, keyboard, W, H, scene, key_areas,
 
 # ── Name entry screen ─────────────────────────────────────────────────────────
 
-def _name_screen(display, touch, keyboard, W, H):
+def _name_screen(display, touch, keyboard, W, H, batt):
     """
     T9 name entry. Returns the entered name string (may be empty if user
     skipped with SWIPE UP or ESC immediately).
@@ -240,7 +242,9 @@ def _name_screen(display, touch, keyboard, W, H):
     p_time = 0.0
 
     sc = displayio.Group()
-    ui.make_title_bar(sc, "NOTES:NAME", "")
+    ui.make_title_bar(sc, "NOTES:NAME", "",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     prompt = label.Label(terminalio.FONT, text="NAME YOUR NOTE",
@@ -331,7 +335,7 @@ def _name_screen(display, touch, keyboard, W, H):
 
 # ── List screen ───────────────────────────────────────────────────────────────
 
-def _list_screen(display, touch, W, H):
+def _list_screen(display, touch, W, H, batt):
     """Returns ("new",) | ("edit", path) | ("quit",)"""
     page = 0
 
@@ -343,7 +347,9 @@ def _list_screen(display, touch, W, H):
         vis = notes[page * 5: page * 5 + 5]
 
         sc = displayio.Group()
-        ui.make_title_bar(sc, "SYS:NOTES", "v1.1")
+        ui.make_title_bar(sc, "SYS:NOTES", "v1.1",
+            time_str=timekeeper.now_str(),
+            battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
         ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
         # NEW NOTE button
@@ -438,7 +444,7 @@ def _list_screen(display, touch, W, H):
 
 # ── Editor ─────────────────────────────────────────────────────────────────---
 
-def _editor(display, touch, keyboard, W, H, path):
+def _editor(display, touch, keyboard, W, H, path, batt):
     """T9 editor. Saves on SWIPE UP or ESC. Shows save status before returning."""
     text   = _read(path)
     p_key  = None
@@ -446,7 +452,9 @@ def _editor(display, touch, keyboard, W, H, path):
     p_time = 0.0
 
     sc = displayio.Group()
-    ui.make_title_bar(sc, "NOTES:EDIT", "")
+    ui.make_title_bar(sc, "NOTES:EDIT", "",
+        time_str=timekeeper.now_str(),
+        battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(sc, ui.CONTENT_Y, ui.CONTENT_H)
 
     # 4 committed text lines
@@ -553,20 +561,21 @@ def _editor(display, touch, keyboard, W, H, path):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     _ensure_dir()
     while True:
-        res = _list_screen(display, touch, W, H)
+        res = _list_screen(display, touch, W, H, batt)
         if res[0] == "quit":
             break
         elif res[0] == "new":
             # Step 1: get a name
-            raw_name = _name_screen(display, touch, keyboard, W, H)
+            raw_name = _name_screen(display, touch, keyboard, W, H, batt)
             stem = _sanitize(raw_name) if raw_name else None
             if stem:
                 fname = _unique_name(stem, _list_notes())
             else:
                 fname = _next_auto_name(_list_notes())
-            _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname)
+            _editor(display, touch, keyboard, W, H, _DATA_DIR + "/" + fname, batt)
         elif res[0] == "edit":
-            _editor(display, touch, keyboard, W, H, res[1])
+            _editor(display, touch, keyboard, W, H, res[1], batt)
     display.root_group = displayio.Group()
