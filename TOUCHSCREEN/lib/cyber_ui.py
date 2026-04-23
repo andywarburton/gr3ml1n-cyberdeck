@@ -224,8 +224,10 @@ def make_scan_bg(group, y_start=0, height=None):
     return tg, pal
 
 
-def make_title_bar(group, title, right=""):
-    """20px title bar at y=0 + 1px separator.  Returns (title_lbl, right_lbl)."""
+def make_title_bar(group, title, right="", time_str=None, battery_str=None):
+    """20px title bar at y=0 + 1px separator.
+    If time_str and/or battery_str are provided they are shown on the far
+    right (replacing the static *right* text).  Returns (title_lbl, right_lbl)."""
     solid_rect(group, 0, 0, W, TITLE_H, C_BG_HEADER)
     solid_rect(group, 0, TITLE_H, W, 1, C_GREEN_MID)
 
@@ -234,7 +236,14 @@ def make_title_bar(group, title, right=""):
     t_lbl.anchored_position = (4, TITLE_H // 2)
     group.append(t_lbl)
 
-    r_lbl = label.Label(terminalio.FONT, text=right if right else " ", color=C_GREEN_MID, scale=1)
+    status_parts = []
+    if time_str:
+        status_parts.append(time_str)
+    if battery_str:
+        status_parts.append(battery_str)
+    right_text = " | ".join(status_parts) if status_parts else (right if right else " ")
+
+    r_lbl = label.Label(terminalio.FONT, text=right_text, color=C_GREEN_MID, scale=1)
     r_lbl.anchor_point = (1.0, 0.5)
     r_lbl.anchored_position = (W - 4, TITLE_H // 2)
     group.append(r_lbl)

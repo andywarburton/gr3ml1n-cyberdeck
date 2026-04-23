@@ -1,0 +1,7 @@
+{
+  "name": "BATTERY TEST",
+  "description": "Show battery voltage",
+  "version": "1.0",
+  "author": "SYS",
+  "order": 1
+}

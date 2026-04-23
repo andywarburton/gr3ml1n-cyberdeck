@@ -1,0 +1,7 @@
+{
+  "name": "BATTERY TIMER",
+  "description": "Log battery runtime test",
+  "version": "1.0",
+  "author": "SYS",
+  "order": 1
+}

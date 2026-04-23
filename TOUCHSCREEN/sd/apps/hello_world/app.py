@@ -6,14 +6,19 @@ import terminalio
 import time
 from adafruit_display_text import label
 from waveshare_touch import classify_gesture
+from battery_monitor import BatteryMonitor
+import timekeeper
 import cyber_ui as ui
 
 _COLORS = [ui.C_GREEN_HI, ui.C_AMBER, ui.C_WHITE, ui.C_RED, ui.C_GREEN_GLOW, ui.C_GREEN_MID]
 
 
 def run(display, touch, keyboard, W, H):
+    batt = BatteryMonitor()
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:HELLO WORLD", "v1.0")
+    ui.make_title_bar(scene, "SYS:HELLO WORLD",
+                      time_str=timekeeper.now_str(),
+                      battery_str="{:.1f}V".format(batt.voltage) if batt.voltage > 0.1 else "")
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     # ── Decorative border box ─────────────────────────────────────────────────

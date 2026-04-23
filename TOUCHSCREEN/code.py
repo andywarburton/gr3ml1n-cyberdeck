@@ -17,6 +17,8 @@ import gc
 from adafruit_display_text import label
 from waveshare_touch import WaveshareTouch, classify_gesture
 from uart_keyboard import get_keyboard
+from battery_monitor import BatteryMonitor
+import timekeeper
 import cyber_ui as ui
 
 # ── App paths ─────────────────────────────────────────────────────────────────
@@ -74,6 +76,11 @@ _boot = displayio.Group()
 ui.boot_glitch(display, _boot)
 gc.collect()
 
+# ── Sync time once at boot (RTC → NTP → fallback) ────────────────────────────
+print("Syncing time...")
+timekeeper.sync()
+print("Time source:", timekeeper.source_name)
+
 # ── Menu constants ─────────────────────────────────────────────────────────────
 TILE_H   = 42
 TILE_GAP = 3
@@ -127,10 +134,18 @@ def tap_to_app(sx, sy, tiles):
     return None
 
 
+def _fmt_battery(batt):
+    v = batt.voltage
+    if v > 0.1:
+        return "{:.1f}V".format(v)
+    return ""
+
+
 # ── Build menu scene ───────────────────────────────────────────────────────────
-def build_scene(apps, page, selected_idx=0):
+def build_scene(apps, page, selected_idx=0, time_str=None, battery_str=None):
     scene = displayio.Group()
-    ui.make_title_bar(scene, "SYS:LAUNCHER", "[GR3ML1N]")
+    ui.make_title_bar(scene, "SYS:LAUNCHER",
+                      time_str=time_str, battery_str=battery_str)
     ui.make_scan_bg(scene, ui.CONTENT_Y, ui.CONTENT_H)
 
     total_pages = max(1, (len(apps) + MAX_VIS - 1) // MAX_VIS)
@@ -189,20 +204,38 @@ def run_launcher():
     page = 0
     selected_idx = 0
     keyboard = get_keyboard()
+    batt = BatteryMonitor()
+    last_clock_refresh = 0
 
     while True:
-        scene, tiles, total_pages = build_scene(apps, page, selected_idx)
+        now = time.monotonic()
+        time_str = timekeeper.now_str()
+        battery_str = _fmt_battery(batt)
+
+        # Rebuild scene automatically every 30 s so the clock updates
+        if now - last_clock_refresh >= 30:
+            last_clock_refresh = now
+            rebuild = True
+        else:
+            rebuild = False
+
+        scene, tiles, total_pages = build_scene(
+            apps, page, selected_idx,
+            time_str=time_str, battery_str=battery_str)
         display.root_group = scene
         gc.collect()
 
         finger_down  = False
         start_x = start_y = last_x = last_y = 0
         selected_app = None
-        rebuild = False
 
         while selected_app is None and not rebuild:
             x, y, touching = touch.read()
             kbd = keyboard.poll()
+
+            # Periodic clock refresh while idling in the inner loop too
+            if time.monotonic() - last_clock_refresh >= 30:
+                rebuild = True
 
             if kbd['down']:
                 selected_idx = min(selected_idx + 1, len(apps) - 1)
@@ -263,6 +296,8 @@ def run_launcher():
 
         if selected_app is not None:
             launch_app(selected_app, keyboard)
+            # Refresh clock after returning from an app
+            last_clock_refresh = time.monotonic()
 
 
 run_launcher()
