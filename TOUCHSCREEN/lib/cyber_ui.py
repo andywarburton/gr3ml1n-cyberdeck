@@ -304,7 +304,7 @@ def boot_glitch(display, group):
         scan_pal[1] = C_BG_SCAN
         time.sleep(0.03)
 
-    full = ">> [GR3ML1N] v1.0 <<"
+    full = ">> [GR3ML1N] <<"
     t_lbl = label.Label(terminalio.FONT, text=" ", color=C_GREEN_HI, scale=2)
     t_lbl.anchor_point = (0.5, 0.5)
     t_lbl.anchored_position = (W // 2, H // 2 - 14)

@@ -1,0 +1,7 @@
+{
+  "name": "WEB SERVER",
+  "description": "WiFi hotspot file server with captive portal",
+  "version": "1.0",
+  "author": "SYS",
+  "order": 6
+}
